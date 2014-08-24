@@ -3,3 +3,4 @@ obj/
 *.suo
 packages/
 AssemblyVersionInfo.fs
+build/
