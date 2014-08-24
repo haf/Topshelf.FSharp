@@ -1,0 +1,26 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Topshelf.FSharp", "Topshelf.FSharp\Topshelf.FSharp.fsproj", "{7C3E0882-01CB-4D49-BFFD-98ECED69DEBD}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Topshelf.FSharp.Example", "Topshelf.FSharp.Example\Topshelf.FSharp.Example.fsproj", "{50924C25-5214-490E-B5D5-844661DAF6C0}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{7C3E0882-01CB-4D49-BFFD-98ECED69DEBD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7C3E0882-01CB-4D49-BFFD-98ECED69DEBD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7C3E0882-01CB-4D49-BFFD-98ECED69DEBD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7C3E0882-01CB-4D49-BFFD-98ECED69DEBD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{50924C25-5214-490E-B5D5-844661DAF6C0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{50924C25-5214-490E-B5D5-844661DAF6C0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{50924C25-5214-490E-B5D5-844661DAF6C0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{50924C25-5214-490E-B5D5-844661DAF6C0}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
