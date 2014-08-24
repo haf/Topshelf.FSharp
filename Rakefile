@@ -56,6 +56,7 @@ namespace :bin do
       m.description = 'Topshelf F# API'
       m.authors = 'Henrik Feldt'
       m.version = ENV['NUGET_VERSION']
+      m.project_url = 'https://github.com/haf/Topshelf.FSharp'
     end
   end
 
