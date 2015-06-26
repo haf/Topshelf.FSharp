@@ -2,6 +2,7 @@ require 'bundler/setup'
 require 'fileutils'
 require 'albacore'
 require 'albacore/tasks/versionizer'
+require 'albacore/tasks/release'
 
 directory 'build'
 
@@ -63,5 +64,11 @@ namespace :bin do
   desc 'package nugets - finds all projects and package them'
   task :nugets => [:compile, :nugets_quick]
 end
+
+Albacore::Tasks::Release.new :release,
+                             pkg_dir: 'build/pkg',
+                             depend_on: [:create_nugets, :ensure_key],
+                             nuget_exe: 'tools/NuGet.exe',
+                             api_key: ENV['NUGET_KEY']
 
 task :default => [:'bin:compile', :'bin:nugets']
