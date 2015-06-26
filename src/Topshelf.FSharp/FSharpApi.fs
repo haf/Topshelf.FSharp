@@ -10,32 +10,36 @@ module FSharpApi =
   open Topshelf.HostConfigurators
   open Topshelf.Runtime
 
+  let toAction f = new Action(f)
+  let toAction1 f = new Action<_>(f)
+  let toFunc f = new Func<_>(f)
+
   let with_topshelf f =
-    HostFactory.Run(new Action<_>(f)) |> int
+    f |> toAction1 |> HostFactory.Run |> int
 
   let add_command_line_definition (conf : HostConfigurator) str action =
-    conf.AddCommandLineDefinition(str, new Action<_>(action))
+    conf.AddCommandLineDefinition(str, action |> toAction1)
 
   let add_command_line_switch (conf : HostConfigurator) str action =
-    conf.AddCommandLineSwitch(str, new Action<_>(action))
+    conf.AddCommandLineSwitch(str, action |> toAction1)
 
   let add_dependency (conf : HostConfigurator) dep_name =
     conf.AddDependency dep_name |> ignore
 
   let before_install (conf : HostConfigurator) f =
-    conf.BeforeInstall(new Action<InstallHostSettings>(f)) |> ignore
+    conf.BeforeInstall(f |> toAction1) |> ignore
 
   let after_install (conf : HostConfigurator) f =
-    conf.AfterInstall(new Action<InstallHostSettings>(f)) |> ignore
+    conf.AfterInstall(f |> toAction1) |> ignore
 
   let apply_command_line (conf : HostConfigurator) str =
     conf.ApplyCommandLine str
 
   let before_uninstall (conf : HostConfigurator) f =
-    conf.BeforeUninstall(new Action(f)) |> ignore
+    conf.BeforeUninstall(f |> toAction) |> ignore
 
   let after_uninstall (conf : HostConfigurator) f =
-    conf.AfterUninstall(new Action(f)) |> ignore
+    conf.AfterUninstall(f |> toAction) |> ignore
 
   let depends_on (conf : HostConfigurator) name =
     conf.DependsOn name |> ignore
@@ -62,7 +66,7 @@ module FSharpApi =
     conf.EnablePauseAndContinue()
 
   let enable_service_recovery (conf : HostConfigurator) f =
-    conf.EnableServiceRecovery(new Action<_>(f)) |> ignore
+    conf.EnableServiceRecovery(f |> toAction1) |> ignore
 
   let enable_shutdown (conf : HostConfigurator) =
     conf.EnableShutdown()
@@ -112,7 +116,7 @@ module FSharpApi =
   /// create a service given a service control factory
   let service (conf : HostConfigurator) (fac : (unit -> 'a)) =
     let service' = conf.Service : Func<_> -> HostConfigurator
-    service' (new Func<_>(fac)) |> ignore
+    service' (fac |> toFunc) |> ignore
 
   /// create a service control from a start and a stop function
   let service_control (start : HostControl -> bool) (stop : HostControl -> bool) =
@@ -148,7 +152,7 @@ module FSharpApi =
   module Recovery =
     let with_recovery (conf : HostConfigurator) f =
       ServiceRecoveryConfiguratorExtensions.EnableServiceRecovery(conf,
-        new Action<_>(f))
+        f |> toAction1)
       |> ignore
 
     let restart (span : TimeSpan) (c : ServiceRecoveryConfigurator) =
