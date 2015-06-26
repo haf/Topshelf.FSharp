@@ -13,14 +13,12 @@ module FSharpApi =
   type Service = 
     { Start: HostControl -> bool
       Stop: HostControl -> bool
-      HostConfiguration: (HostConfigurator -> HostConfigurator) list
-      ServiceRecoveryConfiguration: (ServiceRecoveryConfigurator -> ServiceRecoveryConfigurator) list}
+      HostConfiguration: (HostConfigurator -> HostConfigurator) list }
 
     static member Default = 
         { Start = (fun _ -> true)
           Stop = (fun _ -> true)
-          HostConfiguration = []
-          ServiceRecoveryConfiguration = [] }
+          HostConfiguration = [] }
 
   let toAction f = new Action(f)
   let toAction1 f = new Action<_>(f)
@@ -50,8 +48,7 @@ module FSharpApi =
   let with_stop f service = 
     {service with Stop = f}
 
-  let add_host_configuration_step step service = 
-    {service with HostConfiguration = step::service.HostConfiguration}
+  let add_host_configuration_step step service = {service with HostConfiguration = step::service.HostConfiguration}
   
   let add_command_line_definition str action = add_host_configuration_step (fun c -> c.AddCommandLineDefinition(str, action |> toAction1);c)
 
@@ -135,22 +132,25 @@ module FSharpApi =
 
   [<AutoOpen>]
   module Recovery =
-    let with_recovery f = add_host_configuration_step (fun c -> ServiceRecoveryConfiguratorExtensions.EnableServiceRecovery(c, f |> toAction1))
+    type ServiceRecovery = 
+      { ServiceRecoveryConfigurations: (ServiceRecoveryConfigurator -> ServiceRecoveryConfigurator) list }
+      static member Default = {ServiceRecoveryConfigurations = []}
 
-    let restart (span : TimeSpan) (c : ServiceRecoveryConfigurator) =
-      c.RestartService(int span.TotalMinutes) |> ignore
+    let add_service_recovery_step step service = {service with ServiceRecoveryConfigurations = step::service.ServiceRecoveryConfigurations}
 
-    let restart_computer (span : TimeSpan) message (c : ServiceRecoveryConfigurator) =
-      c.RestartComputer(int span.TotalMinutes, message) |> ignore
+    let with_recovery serviceRecovery = 
+        let f sc = serviceRecovery.ServiceRecoveryConfigurations |> List.fold (fun s x -> x s) sc |> ignore
+        add_host_configuration_step (fun c -> ServiceRecoveryConfiguratorExtensions.EnableServiceRecovery(c, f |> toAction1))
 
-    let run_program (span : TimeSpan) cmd (c : ServiceRecoveryConfigurator) =
-      c.RunProgram(int span.TotalMinutes, cmd) |> ignore
+    let restart (span : TimeSpan) = add_service_recovery_step (fun c -> c.RestartService(int span.TotalMinutes))
 
-    let set_reset_period (days : TimeSpan) (c : ServiceRecoveryConfigurator) =
-      c.SetResetPeriod(int days.TotalDays) |> ignore
+    let restart_computer (span : TimeSpan) message  = add_service_recovery_step (fun c -> c.RestartComputer(int span.TotalMinutes, message))
 
-    let on_crash_only (c : ServiceRecoveryConfigurator) =
-      c.OnCrashOnly()
+    let run_program (span : TimeSpan) cmd = add_service_recovery_step (fun c -> c.RunProgram(int span.TotalMinutes, cmd))
+
+    let set_reset_period (days : TimeSpan) = add_service_recovery_step (fun c -> c.SetResetPeriod(int days.TotalDays))
+
+    let on_crash_only = add_service_recovery_step (fun c -> c.OnCrashOnly();c)
 
   /// A module for making constructing times nicer with F#, not a part of the
   /// fluent configuration API.
