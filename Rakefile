@@ -49,6 +49,7 @@ namespace :bin do
   directory 'build/pkg'
 
   nugets_pack :nugets_quick => 'build/pkg' do |p|
+    p.configuration = Configuration
     p.files   = FileList['src/**/*.{csproj,fsproj,nuspec}'].
       exclude(/Tests|Specs|Example/)
     p.out     = 'build/pkg'
