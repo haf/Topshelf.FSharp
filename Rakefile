@@ -65,9 +65,13 @@ namespace :bin do
   task :nugets => [:compile, :nugets_quick]
 end
 
+task :ensure_key do
+  raise "missing NUGET_KEY" unless ENV['NUGET_KEY']
+end
+
 Albacore::Tasks::Release.new :release,
                              pkg_dir: 'build/pkg',
-                             depend_on: [:create_nugets, :ensure_key],
+                             depend_on: [:'bin:nugets', :ensure_key],
                              nuget_exe: 'tools/NuGet.exe',
                              api_key: ENV['NUGET_KEY']
 
