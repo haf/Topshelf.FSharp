@@ -10,161 +10,147 @@ module FSharpApi =
   open Topshelf.HostConfigurators
   open Topshelf.Runtime
 
-  let with_topshelf f =
-    HostFactory.Run(new Action<_>(f)) |> int
+  type Service = 
+    { Start: HostControl -> bool
+      Stop: HostControl -> bool
+      HostConfiguration: (HostConfigurator -> HostConfigurator) list }
 
-  let add_command_line_definition (conf : HostConfigurator) str action =
-    conf.AddCommandLineDefinition(str, new Action<_>(action))
+    static member Default = 
+        { Start = (fun _ -> true)
+          Stop = (fun _ -> true)
+          HostConfiguration = [] }
 
-  let add_command_line_switch (conf : HostConfigurator) str action =
-    conf.AddCommandLineSwitch(str, new Action<_>(action))
+  let toAction f = new Action(f)
+  let toAction1 f = new Action<_>(f)
+  let toFunc f = new Func<_>(f)
 
-  let add_dependency (conf : HostConfigurator) dep_name =
-    conf.AddDependency dep_name |> ignore
-
-  let before_install (conf : HostConfigurator) f =
-    conf.BeforeInstall(new Action<InstallHostSettings>(f)) |> ignore
-
-  let after_install (conf : HostConfigurator) f =
-    conf.AfterInstall(new Action<InstallHostSettings>(f)) |> ignore
-
-  let apply_command_line (conf : HostConfigurator) str =
-    conf.ApplyCommandLine str
-
-  let before_uninstall (conf : HostConfigurator) f =
-    conf.BeforeUninstall(new Action(f)) |> ignore
-
-  let after_uninstall (conf : HostConfigurator) f =
-    conf.AfterUninstall(new Action(f)) |> ignore
-
-  let depends_on (conf : HostConfigurator) name =
-    conf.DependsOn name |> ignore
-
-  let depends_on_eventlog (conf : HostConfigurator) =
-    conf.DependsOnEventLog() |> ignore
-
-  let depends_on_iis (conf : HostConfigurator) =
-    conf.DependsOnIis() |> ignore
-
-  let depends_on_mssql (conf : HostConfigurator) = 
-    conf.DependsOnMsSql() |> ignore
-
-  let depends_on_rabbitmq (conf : HostConfigurator) =
-    "RabbitMQ" |> depends_on conf
-
-  let depends_on_msmq (conf : HostConfigurator) =
-    conf.DependsOnMsmq() |> ignore
-
-  let disabled (conf : HostConfigurator) =
-    conf.Disabled() |> ignore
-
-  let enable_pause_and_continue (conf : HostConfigurator) =
-    conf.EnablePauseAndContinue()
-
-  let enable_service_recovery (conf : HostConfigurator) f =
-    conf.EnableServiceRecovery(new Action<_>(f)) |> ignore
-
-  let enable_shutdown (conf : HostConfigurator) =
-    conf.EnableShutdown()
-
-  let load_help_text_prefix (conf : HostConfigurator) asm str =
-    conf.LoadHelpTextPrefix( asm, str ) |> ignore
-
-  let run_as (conf : HostConfigurator) usr pwd =
-    conf.RunAs(usr, pwd) |> ignore
-
-  let run_as_network_service (conf : HostConfigurator) =
-    conf.RunAsNetworkService() |> ignore
-
-  let run_as_local_system (conf : HostConfigurator) =
-    conf.RunAsLocalSystem() |> ignore
-
-  let run_as_local_service (conf : HostConfigurator) =
-    conf.RunAsLocalService() |> ignore
-
-  let run_as_prompt (conf : HostConfigurator) =
-    conf.RunAsPrompt() |> ignore
-
-  let help_text_prefix (conf : HostConfigurator) str =
-    conf.SetHelpTextPrefix str |> ignore
-
-  let start_auto (conf : HostConfigurator) =
-    conf.StartAutomatically() |> ignore
-
-  let start_auto_delayed (conf : HostConfigurator) =
-    conf.StartAutomaticallyDelayed() |> ignore
-
-  let start_manually (conf : HostConfigurator) =
-    conf.StartManually() |> ignore
-
-  let use_env_builder (conf : HostConfigurator) f =
-    conf.UseEnvironmentBuilder(new EnvironmentBuilderFactory(f))
-
-  let use_host_builder (conf : HostConfigurator) f =
-    conf.UseHostBuilder(new HostBuilderFactory(f))
-
-  let use_service_builder (conf : HostConfigurator) f =
-    conf.UseServiceBuilder(new ServiceBuilderFactory(f))
-
-  let use_test_host (conf : HostConfigurator) =
-    conf.UseTestHost() |> ignore
-
-  /// create a service given a service control factory
-  let service (conf : HostConfigurator) (fac : (unit -> 'a)) =
-    let service' = conf.Service : Func<_> -> HostConfigurator
-    service' (new Func<_>(fac)) |> ignore
-
-  /// create a service control from a start and a stop function
-  let service_control (start : HostControl -> bool) (stop : HostControl -> bool) =
+  let service_control (start : HostControl -> bool) (stop : HostControl -> bool) () =
     { new ServiceControl with
-        member x.Start hc =
-          start hc
-        member x.Stop hc =
-          stop hc }
+      member x.Start hc =
+        start hc
+      member x.Stop hc =
+        stop hc }
+  
+  let create_service (hc:HostConfigurator) service_func = 
+    hc.Service<ServiceControl>(service_func |> toFunc) |> ignore
+
+  let with_topshelf service = 
+    let hostFactoryConfigurator hc = 
+        let createdHc = service.HostConfiguration |> List.fold (fun chc x -> x chc) hc
+        service_control service.Start service.Stop
+        |> create_service createdHc
+
+    hostFactoryConfigurator |> toAction1 |> HostFactory.Run |> int
+
+  let with_start f service = 
+    {service with Start = f}
+
+  let with_stop f service = 
+    {service with Stop = f}
+
+  let add_host_configuration_step step service = {service with HostConfiguration = step::service.HostConfiguration}
+  
+  let add_command_line_definition str action = add_host_configuration_step (fun c -> c.AddCommandLineDefinition(str, action |> toAction1);c)
+
+  let add_command_line_switch str action = add_host_configuration_step (fun c -> c.AddCommandLineSwitch(str, action |> toAction1);c)
+
+  let add_dependency dep_name = add_host_configuration_step (fun c -> c.AddDependency dep_name)
+
+  let before_install f = add_host_configuration_step (fun c -> c.BeforeInstall(f |> toAction1))
+
+  let after_install f = add_host_configuration_step (fun c -> c.AfterInstall(f |> toAction1))
+
+  let apply_command_line str = add_host_configuration_step (fun c -> c.ApplyCommandLine str;c)
+
+  let before_uninstall f = add_host_configuration_step (fun c -> c.BeforeUninstall(f |> toAction))
+
+  let after_uninstall f = add_host_configuration_step (fun c -> c.AfterUninstall(f |> toAction))
+
+  let depends_on name = add_host_configuration_step (fun c -> c.DependsOn name)
+
+  let depends_on_eventlog = add_host_configuration_step (fun c -> c.DependsOnEventLog())
+
+  let depends_on_iis = add_host_configuration_step (fun c -> c.DependsOnIis())
+
+  let depends_on_mssql = add_host_configuration_step (fun c -> c.DependsOnMsSql())
+
+  let depends_on_rabbitmq = depends_on "RabbitMQ"
+
+  let depends_on_msmq = add_host_configuration_step (fun c -> c.DependsOnMsmq())
+
+  let disabled = add_host_configuration_step (fun c -> c.Disabled())
+
+  let enable_pause_and_continue = add_host_configuration_step (fun c -> c.EnablePauseAndContinue();c)
+
+  let enable_service_recovery f = add_host_configuration_step (fun c -> c.EnableServiceRecovery(f |> toAction1))
+
+  let enable_shutdown = add_host_configuration_step (fun c -> c.EnableShutdown();c)
+
+  let load_help_text_prefix asm str = add_host_configuration_step (fun c -> c.LoadHelpTextPrefix(asm,str))
+
+  let run_as usr pwd = add_host_configuration_step (fun c -> c.RunAs(usr,pwd))
+
+  let run_as_network_service = add_host_configuration_step (fun c -> c.RunAsNetworkService())
+
+  let run_as_local_system = add_host_configuration_step (fun c -> c.RunAsLocalSystem())
+
+  let run_as_local_service = add_host_configuration_step (fun c -> c.RunAsLocalService())
+
+  let run_as_prompt = add_host_configuration_step (fun c -> c.RunAsPrompt())
+
+  let help_text_prefix str = add_host_configuration_step (fun c -> c.SetHelpTextPrefix str)
+
+  let start_auto = add_host_configuration_step (fun c -> c.StartAutomatically())
+
+  let start_auto_delayed = add_host_configuration_step (fun c -> c.StartAutomaticallyDelayed())
+
+  let start_manually = add_host_configuration_step (fun c -> c.StartManually())
+
+  let use_env_builder f = add_host_configuration_step (fun c -> c.UseEnvironmentBuilder(new EnvironmentBuilderFactory(f));c)
+
+  let use_host_builder f = add_host_configuration_step (fun c -> c.UseHostBuilder(new HostBuilderFactory(f));c)
+
+  let use_service_builder f = add_host_configuration_step (fun c -> c.UseServiceBuilder(new ServiceBuilderFactory(f));c)
+
+  let use_test_host = add_host_configuration_step (fun c -> c.UseTestHost())
 
   /// A module for handling the naming of the service. A part of the fluent configuration
   /// API.
   [<AutoOpen>]
   module Naming =
-    let service_name (conf : HostConfigurator) str =
-      conf.SetServiceName str
+    let service_name str = add_host_configuration_step (fun c -> c.SetServiceName str;c)
 
-    let instance_name (conf : HostConfigurator) str =
-      conf.SetInstanceName str
+    let instance_name str = add_host_configuration_step (fun c -> c.SetInstanceName str;c)
 
-    let display_name (conf : HostConfigurator) str =
-      conf.SetDisplayName str
+    let display_name str = add_host_configuration_step (fun c -> c.SetDisplayName str;c)
 
-    let description (conf : HostConfigurator) str =
-      conf.SetDescription str
+    let description str = add_host_configuration_step (fun c -> c.SetDescription str;c)
 
-    let naming_from_asm (conf : HostConfigurator) asm =
-      HostConfiguratorExtensions.UseAssemblyInfoForServiceInfo(conf, asm)
+    let naming_from_asm asm = add_host_configuration_step (fun c -> HostConfiguratorExtensions.UseAssemblyInfoForServiceInfo(c, asm);c)
 
-    let naming_from_this_asm (conf : HostConfigurator) =
-      HostConfiguratorExtensions.UseAssemblyInfoForServiceInfo conf
+    let naming_from_this_asm = add_host_configuration_step (fun c -> HostConfiguratorExtensions.UseAssemblyInfoForServiceInfo c;c)
 
   [<AutoOpen>]
   module Recovery =
-    let with_recovery (conf : HostConfigurator) f =
-      ServiceRecoveryConfiguratorExtensions.EnableServiceRecovery(conf,
-        new Action<_>(f))
-      |> ignore
+    type ServiceRecovery = 
+      { ServiceRecoveryConfigurations: (ServiceRecoveryConfigurator -> ServiceRecoveryConfigurator) list }
+      static member Default = {ServiceRecoveryConfigurations = []}
 
-    let restart (span : TimeSpan) (c : ServiceRecoveryConfigurator) =
-      c.RestartService(int span.TotalMinutes) |> ignore
+    let add_service_recovery_step step service = {service with ServiceRecoveryConfigurations = step::service.ServiceRecoveryConfigurations}
 
-    let restart_computer (span : TimeSpan) message (c : ServiceRecoveryConfigurator) =
-      c.RestartComputer(int span.TotalMinutes, message) |> ignore
+    let with_recovery serviceRecovery = 
+        let f sc = serviceRecovery.ServiceRecoveryConfigurations |> List.fold (fun s x -> x s) sc |> ignore
+        add_host_configuration_step (fun c -> ServiceRecoveryConfiguratorExtensions.EnableServiceRecovery(c, f |> toAction1))
 
-    let run_program (span : TimeSpan) cmd (c : ServiceRecoveryConfigurator) =
-      c.RunProgram(int span.TotalMinutes, cmd) |> ignore
+    let restart (span : TimeSpan) = add_service_recovery_step (fun c -> c.RestartService(int span.TotalMinutes))
 
-    let set_reset_period (days : TimeSpan) (c : ServiceRecoveryConfigurator) =
-      c.SetResetPeriod(int days.TotalDays) |> ignore
+    let restart_computer (span : TimeSpan) message  = add_service_recovery_step (fun c -> c.RestartComputer(int span.TotalMinutes, message))
 
-    let on_crash_only (c : ServiceRecoveryConfigurator) =
-      c.OnCrashOnly()
+    let run_program (span : TimeSpan) cmd = add_service_recovery_step (fun c -> c.RunProgram(int span.TotalMinutes, cmd))
+
+    let set_reset_period (days : TimeSpan) = add_service_recovery_step (fun c -> c.SetResetPeriod(int days.TotalDays))
+
+    let on_crash_only = add_service_recovery_step (fun c -> c.OnCrashOnly();c)
 
   /// A module for making constructing times nicer with F#, not a part of the
   /// fluent configuration API.
