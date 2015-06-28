@@ -41,7 +41,7 @@ module FSharpApi =
 
     hostFactoryConfigurator |> toAction1 |> HostFactory.Run |> int
 
-  [<Obsolete>]
+  [<Obsolete("This function has been renamed, use run instead", false)>]
   let with_topshelf = run
 
   let with_start f service = 
