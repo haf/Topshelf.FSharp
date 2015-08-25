@@ -14,7 +14,6 @@ module FSharpApi =
     { Start: HostControl -> bool
       Stop: HostControl -> bool
       HostConfiguration: (HostConfigurator -> HostConfigurator) list }
-
     static member Default = 
         { Start = (fun _ -> true)
           Stop = (fun _ -> true)
@@ -34,13 +33,16 @@ module FSharpApi =
   let create_service (hc:HostConfigurator) service_func = 
     hc.Service<ServiceControl>(service_func |> toFunc) |> ignore
 
-  let with_topshelf service = 
+  let run service = 
     let hostFactoryConfigurator hc = 
         let createdHc = service.HostConfiguration |> List.fold (fun chc x -> x chc) hc
         service_control service.Start service.Stop
         |> create_service createdHc
 
     hostFactoryConfigurator |> toAction1 |> HostFactory.Run |> int
+
+  [<Obsolete("This function has been renamed, use run instead", false)>]
+  let with_topshelf = run
 
   let with_start f service = 
     {service with Start = f}

@@ -36,4 +36,4 @@ let main argv =
   |> with_start start
   |> with_recovery (ServiceRecovery.Default |> restart (min 10))
   |> with_stop stop
-  |> with_topshelf
+  |> run
