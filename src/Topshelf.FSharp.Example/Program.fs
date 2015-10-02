@@ -1,6 +1,4 @@
-﻿open Topshelf
-
-open System.Reflection
+﻿open System.Reflection
 [<assembly: AssemblyTitle("Sample Service")>]
 ()
 
