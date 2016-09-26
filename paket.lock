@@ -1,0 +1,4 @@
+FRAMEWORK: NET452
+NUGET
+  remote: https://www.nuget.org/api/v2
+    Topshelf (4.0.2)
