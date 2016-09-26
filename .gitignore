@@ -6,3 +6,4 @@ AssemblyVersionInfo.fs
 build/
 Backup*/
 UpgradeLog*.htm
+paket.exe
