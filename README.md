@@ -1,5 +1,7 @@
 # Topshelf F# API
 
+## Maintainers wanted – ping @haf to talk
+
 F# API wrapper for Topshelf.
 
 ``` powershell
