@@ -15,7 +15,7 @@ let main argv =
   let start hc =
     info "sample service starting"
 
-    (s 30) |> HostControl.request_more_time hc
+    (s 30) |> HostControl.requestMoreTime hc
     sleep (s 1)
 
     Threading.ThreadPool.QueueUserWorkItem(fun cb ->
@@ -31,7 +31,7 @@ let main argv =
     true
   
   Service.Default
-  |> with_start start
-  |> with_recovery (ServiceRecovery.Default |> restart (min 10))
-  |> with_stop stop
+  |> withStart start
+  |> withRecovery (ServiceRecovery.Default |> restart (min 10))
+  |> withStop stop
   |> run
