@@ -30,8 +30,8 @@ let main argv =
     info "sample service stopped"
     true
   
-  Service.Default
+  defaultService
   |> withStart start
-  |> withRecovery (ServiceRecovery.Default |> restart (min 10))
+  |> withRecovery (defaultServiceRecovery |> restart (min 10))
   |> withStop stop
   |> run
